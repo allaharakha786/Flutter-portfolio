@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,8 +9,59 @@ import '../widgets/responsive.dart';
 import '../widgets/custom_navbar.dart';
 import '../data/projects.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  Timer? _timer;
+
+  final featured = ProjectData.projects
+      .where(
+        (p) =>
+            p['title'].contains('Trackwise') ||
+            p['title'].contains('AO Scan') ||
+            p['title'].contains('Handy Bee') ||
+            p['title'].contains('MeetParent') ||
+            p['title'].contains('Multi-Vender') ||
+            p['title'].contains('Street Sweeping'),
+      )
+      .toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_currentPage < featured.length - 1) {
+        _currentPage++;
+      } else {
+        _currentPage = 0;
+      }
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,9 +163,8 @@ class HomePage extends StatelessWidget {
 
   Widget _buildHeroText(BuildContext context, {required bool isMobile}) {
     return Column(
-      crossAxisAlignment: isMobile
-          ? CrossAxisAlignment.center
-          : CrossAxisAlignment.start,
+      crossAxisAlignment:
+          isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         FadeInLeft(
@@ -164,9 +216,8 @@ class HomePage extends StatelessWidget {
         FadeInUp(
           delay: const Duration(milliseconds: 600),
           child: Row(
-            mainAxisAlignment: isMobile
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.start,
+            mainAxisAlignment:
+                isMobile ? MainAxisAlignment.center : MainAxisAlignment.start,
             children: [
               _buildPrimaryButton(context, 'View My Work'),
               const SizedBox(width: 20),
@@ -248,9 +299,18 @@ class HomePage extends StatelessWidget {
       height: 56,
       child: OutlinedButton(
         onPressed: () async {
-          final Uri url = Uri.parse('assets/Allaha_Rakha_cv.pdf');
-          if (!await launchUrl(url)) {
-            // Fallback
+          // For web builds, assets are typically at assets/assets/...
+          String path = 'assets/Allaha_Rakha_cv.pdf';
+          if (kIsWeb) {
+            path = 'assets/assets/Allaha_Rakha_cv.pdf';
+          }
+          final Uri url = Uri.parse(path);
+          if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+            // If the specific web path fails, try the standard one as fallback
+            if (kIsWeb) {
+              await launchUrl(Uri.parse('assets/Allaha_Rakha_cv.pdf'),
+                  mode: LaunchMode.externalApplication);
+            }
           }
         },
         style: OutlinedButton.styleFrom(
@@ -273,15 +333,6 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildProjectPreview(BuildContext context) {
-    // Explicitly picking Trackwise and AO Scan
-    final featured = ProjectData.projects
-        .where(
-          (p) =>
-              p['title'].contains('Trackwise') ||
-              p['title'].contains('AO Scan'),
-        )
-        .toList();
-
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: Responsive.isDesktop(context) ? 100 : 24,
@@ -297,27 +348,56 @@ class HomePage extends StatelessWidget {
             ).textTheme.labelLarge?.copyWith(letterSpacing: 2),
           ),
           const SizedBox(height: 32),
-          Responsive(
-            mobile: Column(
-              children: [
-                for (var project in featured) ...[
-                  _buildProjectCard(context, project),
-                  const SizedBox(height: 20),
-                ],
-              ],
-            ),
-            desktop: Row(
-              children: [
-                for (var project in featured)
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: project == featured.last ? 0 : 30,
+          SizedBox(
+            height: 120, // Height of the card
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              itemCount: featured.length,
+              itemBuilder: (context, index) {
+                return AnimatedBuilder(
+                  animation: _pageController,
+                  builder: (context, child) {
+                    double value = 1.0;
+                    if (_pageController.position.hasContentDimensions) {
+                      value = (_pageController.page! - index).abs();
+                      value = (1 - (value * 0.3)).clamp(0.0, 1.0);
+                    }
+                    return Center(
+                      child: SizedBox(
+                        height: Curves.easeOut.transform(value) * 120,
+                        width: double.infinity,
+                        child: child,
                       ),
-                      child: _buildProjectCard(context, project),
-                    ),
-                  ),
-              ],
+                    );
+                  },
+                  child: _buildProjectCard(context, featured[index]),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Page Indicators
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              featured.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                height: 8,
+                width: _currentPage == index ? 24 : 8,
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? AppColors.secondary
+                      : AppColors.textSecondary.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
             ),
           ),
         ],
@@ -329,65 +409,64 @@ class HomePage extends StatelessWidget {
     return InkWell(
       onTap: () =>
           Navigator.pushNamed(context, '/project-detail', arguments: project),
-      child: FadeInUp(
-        child: GlassContainer(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  project['image'],
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                project['image'],
+                height: 70,
+                width: 70,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
                   height: 70,
                   width: 70,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 70,
-                    width: 70,
-                    color: Colors.white.withOpacity(0.05),
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.white10,
-                    ),
+                  color: Colors.white.withOpacity(0.05),
+                  child: const Icon(
+                    Icons.image_not_supported,
+                    color: Colors.white10,
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project['title'],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    project['title'],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      (project['tech'] as List<String>).join(' • '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.secondary,
-                        fontSize: 10,
-                        letterSpacing: 0.5,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    (project['tech'] as List<String>).join(' • '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.secondary,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white24,
-                size: 12,
-              ),
-            ],
-          ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white24,
+              size: 16,
+            ),
+          ],
         ),
       ),
     );

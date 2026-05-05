@@ -14,20 +14,42 @@ class ProjectDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMobile = Responsive.isMobile(context);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const CustomNavbar(),
       drawer: _buildDrawer(context),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildMinimalHeader(context),
-            _buildMainContentSplit(context),
-            if (project['showcase'] != null) _buildInteractiveGallery(context),
-            const SizedBox(height: 100),
-          ],
-        ),
+      body: Stack(
+        children: [
+          // Background Decorative Elements
+          Positioned(
+            top: 100,
+            right: -100,
+            child: _BackgroundGlow(color: AppColors.primary.withOpacity(0.1)),
+          ),
+          Positioned(
+            bottom: 200,
+            left: -100,
+            child: _BackgroundGlow(color: AppColors.secondary.withOpacity(0.1)),
+          ),
+
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildModernHero(context, isMobile),
+                const SizedBox(height: 60),
+                _buildMainContentSection(context, isMobile),
+                if (project['showcase'] != null) ...[
+                  const SizedBox(height: 80),
+                  _buildInteractiveGallery(context),
+                ],
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -67,56 +89,72 @@ class ProjectDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildMinimalHeader(BuildContext context) {
-    return Padding(
+  Widget _buildModernHero(BuildContext context, bool isMobile) {
+    return Container(
       padding: EdgeInsets.symmetric(
         horizontal: Responsive.isDesktop(context) ? 100 : 24,
-        vertical: 40,
+        vertical: 60,
       ),
-      child: FadeInDown(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                project['category'] ?? 'MOBILE APP',
-                style: const TextStyle(
-                  color: AppColors.secondary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  letterSpacing: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FadeInDown(
+            duration: const Duration(milliseconds: 600),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Text(
+                    project['category'] ?? 'MOBILE APP',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 10,
+                      letterSpacing: 2,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 24),
-            Text(
+          ),
+          const SizedBox(height: 32),
+          FadeInLeft(
+            duration: const Duration(milliseconds: 800),
+            child: Text(
               project['title'] ?? 'Project Title',
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontSize: Responsive.isDesktop(context) ? 56 : 36,
+                fontSize: isMobile ? 42 : 82,
+                height: 1.1,
                 fontWeight: FontWeight.w900,
-                letterSpacing: -1,
+                letterSpacing: -2,
               ),
             ),
-            const SizedBox(height: 16),
-            Container(
-              height: 2,
-              width: 80,
-              decoration: const BoxDecoration(
+          ),
+          const SizedBox(height: 32),
+          FadeInUp(
+            delay: const Duration(milliseconds: 400),
+            child: Container(
+              height: 4,
+              width: 120,
+              decoration: BoxDecoration(
                 gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMainContentSplit(BuildContext context) {
+  Widget _buildMainContentSection(BuildContext context, bool isMobile) {
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: Responsive.isDesktop(context) ? 100 : 24,
@@ -124,19 +162,19 @@ class ProjectDetailPage extends StatelessWidget {
       child: Responsive(
         mobile: Column(
           children: [
-            _buildProjectImageMockup(context, isMobile: true),
-            const SizedBox(height: 40),
-            _buildProjectInfoPanel(context),
+            _buildFeaturedMockup(context, isMobile: true),
+            const SizedBox(height: 60),
+            _buildDetailedInfoPanel(context),
           ],
         ),
         desktop: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(flex: 3, child: _buildProjectInfoPanel(context)),
+            Expanded(flex: 3, child: _buildDetailedInfoPanel(context)),
             const SizedBox(width: 80),
             Expanded(
               flex: 2,
-              child: _buildProjectImageMockup(context, isMobile: false),
+              child: _buildFeaturedMockup(context, isMobile: false),
             ),
           ],
         ),
@@ -144,131 +182,165 @@ class ProjectDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildProjectInfoPanel(BuildContext context) {
-    return FadeInLeft(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'THE MISSION',
-            style: TextStyle(
-              color: AppColors.textSecondary.withOpacity(0.5),
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            project['fullDesc'] ?? project['desc'] ?? '',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.8,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 48),
-          _buildTechGrid(context),
-          if (project['playStore'] != null) ...[
-            const SizedBox(height: 48),
-            _buildStoreLink(context, project['playStore']),
-          ],
-        ],
-      ),
-    );
-  }
+  Widget _buildDetailedInfoPanel(BuildContext context) {
+    final String fullDesc = project['fullDesc'] ?? project['desc'] ?? '';
+    final List<String> paragraphs = fullDesc.split('\n\n');
 
-  Widget _buildTechGrid(BuildContext context) {
-    final tech = (project['tech'] as List<String>?) ?? [];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        FadeInLeft(
+          delay: const Duration(milliseconds: 200),
+          child: _buildSectionLabel('OVERVIEW'),
+        ),
+        const SizedBox(height: 24),
+        for (var p in paragraphs) ...[
+          FadeInLeft(
+            delay: const Duration(milliseconds: 300),
+            child: Text(
+              p,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.8,
+                fontSize: 17,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+        const SizedBox(height: 48),
+        FadeInLeft(
+          delay: const Duration(milliseconds: 400),
+          child: _buildSectionLabel('TECHNOLOGIES'),
+        ),
+        const SizedBox(height: 24),
+        FadeInUp(
+          delay: const Duration(milliseconds: 500),
+          child: _buildTechStack(context),
+        ),
+        if (project['playStore'] != null) ...[
+          const SizedBox(height: 56),
+          FadeInUp(
+            delay: const Duration(milliseconds: 600),
+            child: _buildPlayStoreButton(context, project['playStore']),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionLabel(String text) {
+    return Row(
+      children: [
+        Container(width: 24, height: 2, color: AppColors.secondary),
+        const SizedBox(width: 12),
         Text(
-          'TECHNOLOGY STACK',
-          style: TextStyle(
-            color: AppColors.textSecondary.withOpacity(0.5),
+          text,
+          style: const TextStyle(
+            color: AppColors.secondary,
             fontWeight: FontWeight.bold,
             fontSize: 12,
-            letterSpacing: 2,
+            letterSpacing: 3,
           ),
-        ),
-        const SizedBox(height: 20),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: tech.map((t) => _buildModernTag(t)).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildModernTag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white70, fontSize: 13),
-      ),
+  Widget _buildTechStack(BuildContext context) {
+    final tech = (project['tech'] as List<String>?) ?? [];
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: tech.map((t) => _buildGlassTag(t)).toList(),
     );
   }
 
-  Widget _buildProjectImageMockup(
-    BuildContext context, {
-    required bool isMobile,
-  }) {
-    return FadeInRight(
-      child: Center(
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.2),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
-            child: Image.asset(
-              project['image'] ?? 'hero-image.png',
-              width: isMobile ? 250 : 350,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 250,
-                height: 500,
-                color: Colors.white10,
-                child: const Icon(
-                  Icons.phone_android,
-                  color: Colors.white10,
-                  size: 60,
-                ),
-              ),
-            ),
-          ),
+  Widget _buildGlassTag(String text) {
+    return GlassContainer(
+      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      borderRadius: 12,
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
   }
 
-  Widget _buildStoreLink(BuildContext context, String url) {
+  Widget _buildFeaturedMockup(BuildContext context, {required bool isMobile}) {
+    return FadeInRight(
+      duration: const Duration(milliseconds: 1000),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Floating Glow Effect
+            Container(
+              width: isMobile ? 220 : 320,
+              height: isMobile ? 400 : 600,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.primary.withOpacity(0.2),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            // Mockup Image
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40),
+                child: Image.asset(
+                  project['image'] ?? 'hero-image.png',
+                  width: isMobile ? 280 : 380,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 280,
+                    height: 550,
+                    color: Colors.white.withOpacity(0.05),
+                    child: const Icon(
+                      Icons.phone_android,
+                      color: Colors.white10,
+                      size: 80,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayStoreButton(BuildContext context, String url) {
     return InkWell(
       onTap: () => launchUrl(Uri.parse(url)),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 20,
+              color: AppColors.primary.withOpacity(0.4),
+              blurRadius: 25,
               offset: const Offset(0, 10),
             ),
           ],
@@ -278,20 +350,28 @@ class ProjectDetailPage extends StatelessWidget {
           children: [
             Image.asset(
               'assets/images/google_play_store_icon.png',
-              height: 24,
-              width: 24,
-              errorBuilder: (context, error, stackTrace) => 
-                const Icon(Icons.shop_2_rounded, color: Colors.white),
+              height: 28,
+              width: 28,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.shop_2_rounded, color: Colors.white),
             ),
-            const SizedBox(width: 16),
-            const Text(
-              'EXPLORE ON PLAY STORE',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-                fontSize: 13,
-              ),
+            const SizedBox(width: 20),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'GET IT ON',
+                  style: TextStyle(color: Colors.white70, fontSize: 10),
+                ),
+                Text(
+                  'Google Play',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -310,19 +390,11 @@ class ProjectDetailPage extends StatelessWidget {
           padding: EdgeInsets.symmetric(
             horizontal: Responsive.isDesktop(context) ? 100 : 24,
           ),
-          child: Text(
-            'INTERFACE ARCHITECTURE',
-            style: TextStyle(
-              color: AppColors.textSecondary.withOpacity(0.5),
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              letterSpacing: 2,
-            ),
-          ),
+          child: _buildSectionLabel('INTERFACE SHOWCASE'),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 48),
         SizedBox(
-          height: 550,
+          height: 600,
           child: ScrollConfiguration(
             behavior: ScrollConfiguration.of(context).copyWith(
               dragDevices: {
@@ -337,19 +409,26 @@ class ProjectDetailPage extends StatelessWidget {
               ),
               scrollDirection: Axis.horizontal,
               itemCount: showcase.length,
+              physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) {
                 return Padding(
-                  padding: const EdgeInsets.only(right: 30),
-                  child: FadeInRight(
-                    delay: Duration(milliseconds: index * 100),
+                  padding: const EdgeInsets.only(right: 40),
+                  child: FadeInUp(
+                    delay: Duration(milliseconds: index * 150),
                     child: Container(
                       width: 280,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white10),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(30),
                         child: Image.asset(
                           showcase[index],
                           fit: BoxFit.cover,
@@ -370,6 +449,23 @@ class ProjectDetailPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _BackgroundGlow extends StatelessWidget {
+  final Color color;
+  const _BackgroundGlow({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 500,
+      height: 500,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, Colors.transparent]),
+      ),
     );
   }
 }
